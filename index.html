@@ -203,6 +203,7 @@ const ic = {
   mailbox: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   upgrade: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>',
   info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  settings: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
   file: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg>',
   edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
   trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
@@ -212,7 +213,7 @@ const ic = {
 };
 const PAGES = [
   ["dashboard", "Dashboard"], ["products", "Products"], ["whitelist", "Whitelist"], ["devlogs", "DevLogs"],
-  ["mailbox", "Mailbox"], ["upgrade", "Upgrade Plan"], ["info", "Information"],
+  ["mailbox", "Mailbox"], ["upgrade", "Upgrade Plan"], ["info", "Information"], ["settings", "Settings"],
 ];
 $("#nav").innerHTML = PAGES.map(([id, label]) => `<button class="nav" data-page="${id}">${ic[id === "info" ? "info" : id]}<span>${label}</span></button>`).join("");
 
@@ -276,7 +277,7 @@ async function go(page) {
   S.page = page; closeNav();
   document.querySelectorAll(".nav").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
   $("#page").innerHTML = '<p class="muted">Memuat…</p>';
-  try { await ({ dashboard: pgDashboard, products: pgProducts, whitelist: pgWhitelist, devlogs: pgLogs, mailbox: pgMailbox, upgrade: pgUpgrade, info: pgInfo })[page](); }
+  try { await ({ dashboard: pgDashboard, products: pgProducts, whitelist: pgWhitelist, devlogs: pgLogs, mailbox: pgMailbox, upgrade: pgUpgrade, info: pgInfo, settings: pgSettings })[page](); }
   catch (e) { $("#page").innerHTML = `<p class="err">Gagal memuat: ${esc(e.message || e)}</p>`; }
 }
 async function fetchProducts() {
@@ -388,6 +389,30 @@ async function pgInfo() {
       <li>Tempel di <b>ServerScriptService</b>, lalu taruh sistem utama kamu di dalam <code>StartProduct()</code>.</li>
       <li>Di <b>Whitelist</b>, tambahkan GroupId atau UserId pemilik game.</li>
       <li>Nyalakan <b>Allow HTTP Requests</b> di Game Settings, lalu pantau hasilnya di <b>DevLogs</b>.</li></ol></div>`;
+}
+
+async function pgSettings() {
+  const { data } = await sb.auth.getUser(); const u = data.user;
+  const pw = (id, ph, ac) => `<div class="pw"><input id="${id}" type="password" class="inp" placeholder="${ph}" autocomplete="${ac}"><button type="button" class="eye" data-act="toggle-pw" data-target="${id}" aria-label="Lihat password">${EYE}</button></div>`;
+  $("#page").innerHTML = head("Settings", "Kelola akun kamu") + `
+    <div class="card plan"><h3>Profil</h3>
+      <label class="l" for="sUser">Username</label>
+      <input id="sUser" class="inp" value="${esc(u.user_metadata?.username || "")}" maxlength="20" autocapitalize="none" spellcheck="false">
+      <label class="l">Email</label><input class="inp" value="${esc(u.email)}" disabled>
+      <button class="btn btn-w btn-full" style="margin-top:14px" data-act="s-user">Simpan username</button></div>
+    <div class="card plan"><h3>Ganti password</h3>
+      <label class="l" for="sOld">Password saat ini</label>${pw("sOld", "Password saat ini", "current-password")}
+      <label class="l" for="sNew">Password baru</label>${pw("sNew", "Minimal 6 karakter", "new-password")}
+      <label class="l" for="sNew2">Konfirmasi password baru</label>${pw("sNew2", "Ulangi password baru", "new-password")}
+      <button class="btn btn-w btn-full" style="margin-top:14px" data-act="s-pass">Perbarui password</button></div>
+    <div class="card plan"><h3>Ganti email</h3>
+      <label class="l" for="sEmail">Email baru</label>
+      <input id="sEmail" type="email" class="inp" placeholder="emailbaru@gmail.com" autocapitalize="none" spellcheck="false">
+      <p class="muted xs" style="margin:8px 0 0">Link konfirmasi dikirim ke email. Email baru berlaku setelah dikonfirmasi.</p>
+      <button class="btn btn-w btn-full" style="margin-top:14px" data-act="s-email">Ganti email</button></div>
+    <div class="card plan"><h3>Sesi</h3>
+      <p class="muted sm" style="margin:8px 0 14px">Keluar dari semua perangkat yang sedang login, termasuk yang ini.</p>
+      <button class="btn btn-full" data-act="s-signout-all">Keluar dari semua perangkat</button></div>`;
 }
 
 /* ---------- LOADER GENERATOR ---------- */
@@ -506,6 +531,35 @@ document.addEventListener("click", async (e) => {
     const { error } = await sb.auth.updateUser({ password: np });
     if (error) return toast("Gagal: " + error.message);
     closeModal(); return toast("Password diperbarui");
+  }
+  if (act === "s-user") {
+    const username = $("#sUser").value.trim();
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return toast("Username 3–20 karakter: huruf, angka, atau _");
+    const { error } = await sb.auth.updateUser({ data: { username } });
+    if (error) return toast("Gagal: " + error.message);
+    $("#who").textContent = username; return toast("Username disimpan");
+  }
+  if (act === "s-pass") {
+    const old = $("#sOld").value, nw = $("#sNew").value;
+    if (!old) return toast("Isi password saat ini");
+    if (nw.length < 6) return toast("Password baru minimal 6 karakter");
+    if (nw !== $("#sNew2").value) return toast("Konfirmasi password tidak sama");
+    const { data: u } = await sb.auth.getUser();
+    const chk = await sb.auth.signInWithPassword({ email: u.user.email, password: old });
+    if (chk.error) return toast("Password saat ini salah");
+    const { error } = await sb.auth.updateUser({ password: nw });
+    if (error) return toast("Gagal: " + error.message);
+    toast("Password diperbarui"); return pgSettings();
+  }
+  if (act === "s-email") {
+    const email = $("#sEmail").value.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return toast("Masukkan email yang valid");
+    const { error } = await sb.auth.updateUser({ email }, { emailRedirectTo: location.origin + location.pathname });
+    return toast(error ? "Gagal: " + error.message : "Cek inbox email untuk konfirmasi");
+  }
+  if (act === "s-signout-all") {
+    if (!confirm("Keluar dari semua perangkat?")) return;
+    await sb.auth.signOut({ scope: "global" }); return showLogin();
   }
   if (act === "logout") { await sb.auth.signOut(); return showLogin(); }
   if (act === "refresh") return go(S.page);
