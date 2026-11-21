@@ -100,6 +100,16 @@ const SUPABASE_ANON_KEY = "sb_publishable_6DKmlFaYPuhHpR77Xfw7-A_gUwgHktJ";
   .modal h2{font-size:21px}.modal .x{position:absolute;top:10px;right:10px}
   pre.code{background:#0c0c0c;border:1px solid var(--line);border-radius:12px;padding:12px;max-height:280px;overflow:auto;font-size:11.5px;line-height:1.5;margin:12px 0;white-space:pre}
   #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:90;background:#fff;color:#0a0a0a;padding:11px 18px;border-radius:12px;font-weight:600;display:none;max-width:90%}
+  .logrow{padding:14px 16px;margin-bottom:10px;display:grid;gap:8px}
+  .loghead{display:none;padding:0 16px 8px;letter-spacing:.1em}
+  .lt{font-weight:600;word-break:break-word}
+  .open{color:var(--muted);font-size:12.5px;text-decoration:underline;display:inline-block;padding:10px 0;min-height:44px}
+  @media(min-width:760px){
+    .logrow,.loghead{grid-template-columns:1.1fr 1fr 1.2fr 160px 120px;gap:14px}
+    .logrow{align-items:center} .loghead{display:grid}
+  }
+  .pw{position:relative}.pw .inp{padding-right:54px}
+  .eye{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:46px;height:46px;border:0;background:none;color:#9a9a9a;display:grid;place-items:center;cursor:pointer}
   .plan{padding:20px;margin-bottom:12px}.plan ul{margin:10px 0 0;padding-left:18px;color:#cfcfcf;line-height:1.8}
   ol.steps{padding-left:20px;line-height:1.9;color:#d6d6d6}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -116,14 +126,19 @@ const SUPABASE_ANON_KEY = "sb_publishable_6DKmlFaYPuhHpR77Xfw7-A_gUwgHktJ";
       <div class="sub">SCRIPT AUTHORITY</div>
       <div class="rule"></div>
     </div>
-    <label class="l" for="u">Username</label>
-    <input id="u" class="inp" placeholder="Enter your username" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <div id="uwrap" class="hidden">
+      <label class="l" for="u">Username</label>
+      <input id="u" class="inp" placeholder="Nama tampilan kamu" autocomplete="nickname" autocapitalize="none" spellcheck="false">
+    </div>
+    <label class="l" for="em">Email</label>
+    <input id="em" type="email" class="inp" placeholder="Enter your email" autocomplete="email" autocapitalize="none" spellcheck="false">
     <label class="l" for="p">Password</label>
-    <input id="p" type="password" class="inp" placeholder="Enter your password" autocomplete="current-password">
+    <div class="pw"><input id="p" type="password" class="inp" placeholder="Enter your password" autocomplete="current-password"><button type="button" class="eye" data-act="toggle-pw" data-target="p" aria-label="Lihat password"></button></div>
     <div id="p2wrap" class="hidden">
       <label class="l" for="p2">Konfirmasi password</label>
-      <input id="p2" type="password" class="inp" placeholder="Ulangi password" autocomplete="new-password">
+      <div class="pw"><input id="p2" type="password" class="inp" placeholder="Ulangi password" autocomplete="new-password"><button type="button" class="eye" data-act="toggle-pw" data-target="p2" aria-label="Lihat password"></button></div>
     </div>
+    <div id="forgotWrap" style="text-align:right;margin-top:10px"><button class="link sm" data-act="forgot" style="font-weight:500">Lupa password?</button></div>
     <button id="authBtn" class="btn btn-w btn-full" style="margin-top:20px" data-act="auth">LOGIN</button>
     <div id="authErr" class="err"></div>
     <p class="muted sm" style="text-align:center;margin:6px 0 0">
@@ -161,8 +176,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_6DKmlFaYPuhHpR77Xfw7-A_gUwgHktJ";
 const configured = !SUPABASE_URL.startsWith("ISI_") && !SUPABASE_ANON_KEY.startsWith("ISI_");
 const sb = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const $ = (s) => document.querySelector(s);
-const MAX_PRODUCTS = 100;
-const EMAIL_DOMAIN = "hablen.app";
+const MAX_PRODUCTS = 10;
+const EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const S = { page: "dashboard", products: [], mode: "login", user: null };
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -213,36 +228,45 @@ function showLogin() { $("#app").classList.add("hidden"); $("#login").classList.
 async function showApp() {
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   const { data } = await sb.auth.getUser(); S.user = data.user;
-  $("#who").textContent = (S.user?.email || "").split("@")[0];
+  $("#who").textContent = S.user?.user_metadata?.username || S.user?.email || "";
   go(S.page);
 }
 function setMode(m) {
   S.mode = m; const reg = m === "register";
   $("#authBtn").textContent = reg ? "REGISTER" : "LOGIN";
   $("#p2wrap").classList.toggle("hidden", !reg);
+  $("#uwrap").classList.toggle("hidden", !reg);
+  $("#forgotWrap").classList.toggle("hidden", reg);
   $("#swText").textContent = reg ? "Already have an account?" : "Don't have an account?";
   $("#swBtn").textContent = reg ? "Login" : "Register Now";
   $("#authErr").textContent = "";
 }
 async function doAuth() {
   const err = $("#authErr"); err.textContent = "";
-  const user = $("#u").value.trim().toLowerCase(), pass = $("#p").value;
-  if (!/^[a-z0-9_]{3,20}$/.test(user)) return (err.textContent = "Username 3–20 karakter: huruf kecil, angka, atau _");
+  const email = $("#em").value.trim().toLowerCase(), pass = $("#p").value;
+  if (!/^\S+@\S+\.\S+$/.test(email)) return (err.textContent = "Masukkan email yang valid");
   if (pass.length < 6) return (err.textContent = "Password minimal 6 karakter");
-  const email = `${user}@${EMAIL_DOMAIN}`;
   const btn = $("#authBtn"); btn.disabled = true;
   try {
     if (S.mode === "register") {
+      const username = $("#u").value.trim();
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return (err.textContent = "Username 3–20 karakter: huruf, angka, atau _");
       if (pass !== $("#p2").value) return (err.textContent = "Konfirmasi password tidak sama");
-      const { data, error } = await sb.auth.signUp({ email, password: pass });
-      if (error) return (err.textContent = error.message.includes("already") ? "Username sudah dipakai" : error.message);
-      if (!data.session) return (err.textContent = "Akun dibuat, tapi Supabase meminta konfirmasi email. Matikan 'Confirm email' di Authentication > Providers > Email.");
+      const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username } } });
+      if (error) return (err.textContent = error.message);
+      if (!data.session) return (err.textContent = "Akun dibuat. Cek email untuk konfirmasi, lalu login.");
       toast("Akun dibuat"); return showApp();
     }
     const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (error) return (err.textContent = "Username atau password salah");
+    if (error) return (err.textContent = /confirm/i.test(error.message) ? "Email belum dikonfirmasi. Cek inbox email kamu." : "Email atau password salah");
     showApp();
   } finally { btn.disabled = false; }
+}
+function openNewPassword() {
+  openModal(`<h2>Password baru</h2><p class="muted sm" style="margin:6px 0 0">Masukkan password baru untuk akunmu.</p>
+    <label class="l" for="np">Password baru</label>
+    <div class="pw"><input id="np" type="password" class="inp" placeholder="Minimal 6 karakter" autocomplete="new-password"><button type="button" class="eye" data-act="toggle-pw" data-target="np" aria-label="Lihat password">${EYE}</button></div>
+    <button class="btn btn-w btn-full" style="margin-top:16px" data-act="save-pw">Simpan password</button>`);
 }
 
 /* ---------- ROUTER ---------- */
@@ -313,7 +337,7 @@ async function pgWhitelist() {
     <div class="card row">
       <div style="min-width:0">
         <div><span class="badge b-n">${esc(w.target_type)}</span> <b class="mono" style="font-size:14px">${esc(w.target_id)}</b></div>
-        <div class="muted sm" style="margin-top:6px">${esc(w.products?.name || "-")}${w.note ? " · " + esc(w.note) : ""}</div>
+        <div class="muted sm" style="margin-top:6px">${esc(w.products?.name || "-")}${w.owner_user_id ? " · Owner " + esc(w.owner_user_id) : ""}${w.note ? " · " + esc(w.note) : ""}</div>
       </div>
       <div class="acts" style="align-items:center">
         <button class="sw ${w.is_active ? "on" : ""}" aria-label="Aktif/nonaktif" data-act="w-toggle" data-id="${esc(w.id)}" data-val="${w.is_active}"></button>
@@ -327,12 +351,17 @@ async function pgWhitelist() {
 
 function logCard(l) {
   const ok = l.status === "WHITELISTED";
-  return `<div class="card row" style="grid-template-columns:1fr">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-      <span class="badge ${ok ? "b-ok" : "b-bad"}">${esc(l.status)}</span><span class="muted xs">${esc(fmtTime(l.created_at))}</span></div>
-    <div style="font-weight:600">${esc(l.game_name || "Unknown")}</div>
-    <div class="muted sm">${esc(l.creator_type)} ${esc(l.creator_id)} · Place ${esc(l.place_id)}${l.products?.name ? " · " + esc(l.products.name) : ""}</div>
-    ${l.game_url ? `<a class="btn btn-sm" style="justify-self:start;text-decoration:none" href="${esc(l.game_url)}" target="_blank" rel="noopener noreferrer">${ic.ext} Buka map Roblox</a>` : ""}
+  const isGroup = l.creator_type === "GROUP";
+  const named = l.creator_name && l.creator_name !== "Unknown";
+  const title = named ? l.creator_name : "ID: " + l.creator_id;
+  const owner = isGroup && l.owner_name && l.owner_name !== "Unknown"
+    ? `<div class="muted xs">Owner: ${esc(l.owner_name)} (${esc(l.owner_id ?? "-")})</div>` : "";
+  return `<div class="card logrow">
+    <div><div class="lt">${esc(title)}</div><div class="muted xs">ID: ${esc(l.creator_id)} • ${isGroup ? "Community" : "Player"}</div>${owner}</div>
+    <div class="lt">${esc(l.products?.name || "-")}</div>
+    <div><div class="lt">${esc(l.game_name || "Unknown")}</div>${l.game_url ? `<a class="open" href="${esc(l.game_url)}" target="_blank" rel="noopener noreferrer">Open →</a>` : ""}</div>
+    <div><span class="badge ${ok ? "b-ok" : "b-bad"}">${ok ? "✓ WHITELISTED" : "✗ NOT WHITELISTED"}</span></div>
+    <div class="muted xs">${esc(fmtTime(l.created_at))}</div>
   </div>`;
 }
 async function pgLogs() {
@@ -340,6 +369,7 @@ async function pgLogs() {
   if (error) throw error;
   $("#page").innerHTML = head("DevLogs", "Riwayat eksekusi script di game Roblox") +
     `<button class="btn btn-full" style="margin-bottom:16px" data-act="refresh">Muat ulang</button>` +
+    `<div class="loghead muted xs"><span>CREATOR</span><span>PRODUCT</span><span>GAME</span><span>STATUS</span><span>TIME</span></div>` +
     (data.length ? data.map(logCard).join("") : emptyBox("Belum ada eksekusi"));
 }
 async function pgMailbox() {
@@ -373,6 +403,7 @@ local SHUTDOWN_IF_BLOCKED = false
 local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+local GroupService = game:GetService("GroupService")
 
 local function StartProduct()
 	-- >>> TEMPELKAN SKRIP SISTEM UTAMA ANDA DI SINI <<<
@@ -383,10 +414,28 @@ local function getGameName()
 	return (ok and info and info.Name) and tostring(info.Name) or "Unknown"
 end
 
+local function getCreatorInfo()
+	local cType = string.upper(game.CreatorType.Name)
+	local name, ownerId, ownerName = "Unknown", game.CreatorId, "Unknown"
+	if cType == "GROUP" then
+		local ok, info = pcall(function() return GroupService:GetGroupInfoAsync(game.CreatorId) end)
+		if ok and info then
+			name = tostring(info.Name)
+			if info.Owner then ownerId = info.Owner.Id; ownerName = tostring(info.Owner.Name) else ownerId = 0 end
+		end
+	else
+		local ok, n = pcall(function() return Players:GetNameFromUserIdAsync(game.CreatorId) end)
+		if ok and n then name = tostring(n); ownerName = tostring(n) end
+	end
+	return cType, name, ownerId, ownerName
+end
+
 local function verify()
+	local cType, cName, oId, oName = getCreatorInfo()
 	local body = HttpService:JSONEncode({
 		p_product_key = PRODUCT_KEY, p_place_id = game.PlaceId, p_game_name = getGameName(),
-		p_creator_type = string.upper(game.CreatorType.Name), p_creator_id = game.CreatorId,
+		p_creator_type = cType, p_creator_id = game.CreatorId,
+		p_creator_name = cName, p_owner_id = oId, p_owner_name = oName,
 	})
 	for attempt = 1, 3 do
 		local ok, res = pcall(function()
@@ -433,7 +482,7 @@ if ok then print("[Hablen] Whitelist valid: " .. msg); StartProduct() else block
 
 /* ---------- EVENTS ---------- */
 document.addEventListener("input", (e) => { if (e.target.id === "pSearch") renderProducts(e.target.value); });
-document.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.target.id === "u" || e.target.id === "p" || e.target.id === "p2")) doAuth(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && ["u", "em", "p", "p2"].includes(e.target.id)) doAuth(); });
 
 document.addEventListener("click", async (e) => {
   const pg = e.target.closest("[data-page]"); if (pg) return go(pg.dataset.page);
@@ -445,6 +494,19 @@ document.addEventListener("click", async (e) => {
   if (act === "close-nav") return closeNav();
   if (act === "switch-auth") return setMode(S.mode === "login" ? "register" : "login");
   if (act === "auth") return doAuth();
+  if (act === "toggle-pw") { const i = document.getElementById(el.dataset.target); i.type = i.type === "password" ? "text" : "password"; return; }
+  if (act === "forgot") {
+    const email = $("#em").value.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return ($("#authErr").textContent = "Isi email di atas dulu, lalu tekan Lupa password");
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    return toast(error ? "Gagal: " + error.message : "Link reset dikirim. Cek inbox dan folder Spam.");
+  }
+  if (act === "save-pw") {
+    const np = $("#np").value; if (np.length < 6) return toast("Password minimal 6 karakter");
+    const { error } = await sb.auth.updateUser({ password: np });
+    if (error) return toast("Gagal: " + error.message);
+    closeModal(); return toast("Password diperbarui");
+  }
   if (act === "logout") { await sb.auth.signOut(); return showLogin(); }
   if (act === "refresh") return go(S.page);
 
@@ -501,13 +563,15 @@ document.addEventListener("click", async (e) => {
     return openModal(`<h2>Add Whitelist</h2>
       <label class="l" for="wProd">Produk</label><select id="wProd" class="inp">${opts}</select>
       <label class="l" for="wType">Tipe</label><select id="wType" class="inp"><option value="GROUP">GROUP</option><option value="USER">USER</option></select>
-      <label class="l" for="wId">ID Roblox</label><input id="wId" class="inp" inputmode="numeric" placeholder="GroupId / UserId">
+      <label class="l" for="wId">ID Grup / User Roblox</label><input id="wId" class="inp" inputmode="numeric" placeholder="GroupId / UserId">
+      <label class="l" for="wOwner">UserId Owner (opsional, untuk GROUP)</label><input id="wOwner" class="inp" inputmode="numeric" placeholder="UserId pemilik grup">
       <label class="l" for="wNote">Catatan (opsional)</label><input id="wNote" class="inp" maxlength="80">
       <button class="btn btn-w btn-full" style="margin-top:16px" data-act="w-create">Tambah</button>`);
   }
   if (act === "w-create") {
     const raw = $("#wId").value.trim(); if (!/^\d+$/.test(raw)) return toast("ID Roblox harus angka");
-    const { error } = await sb.from("whitelists").insert({ product_id: $("#wProd").value, target_type: $("#wType").value, target_id: Number(raw), note: $("#wNote").value.trim() || null });
+    const ownerRaw = $("#wOwner").value.trim(); if (ownerRaw && !/^\d+$/.test(ownerRaw)) return toast("UserId owner harus angka");
+    const { error } = await sb.from("whitelists").insert({ product_id: $("#wProd").value, target_type: $("#wType").value, target_id: Number(raw), owner_user_id: ownerRaw ? Number(ownerRaw) : null, note: $("#wNote").value.trim() || null });
     if (error) return toast("Gagal: " + error.message);
     closeModal(); toast("Whitelist ditambahkan"); return go("whitelist");
   }
@@ -525,6 +589,9 @@ document.addEventListener("click", async (e) => {
 /* ---------- INIT ---------- */
 (async function init() {
   if (!configured) { showLogin(); $("#authErr").textContent = "Isi SUPABASE_URL dan SUPABASE_ANON_KEY di baris paling atas file."; return; }
+  document.querySelectorAll(".eye").forEach((b) => { if (!b.innerHTML) b.innerHTML = EYE; });
+  setMode("login");
+  sb.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") openNewPassword(); });
   const { data } = await sb.auth.getSession();
   if (data.session) showApp(); else showLogin();
 })();
